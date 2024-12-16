@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotCoin dApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.5/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>BotCoin dApp</h1>
+    <p id="status">Status: Not connected</p>
+
+    <button id="connectWallet">Connect Wallet</button>
+
+    <h2>Your Balance</h2>
+    <p id="balance">0 BOT</p>
+
+    <h2>Transfer Tokens</h2>
+    <form id="transferForm">
+        <label for="recipient">Recipient Address:</label>
+        <input type="text" id="recipient" required>
+        <br>
+        <label for="amount">Amount:</label>
+        <input type="number" id="amount" required>
+        <br>
+        <button type="submit">Send Tokens</button>
+    </form>
+
+    <script>
+        const tokenAddress = "<YOUR_TOKEN_CONTRACT_ADDRESS>"; // Replace with your BotCoin contract address
+        const tokenABI = [
+            // Replace with your token's ABI
+            {
+                "constant": true,
+                "inputs": [{"name": "owner", "type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"name": "", "type": "uint256"}],
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "to", "type": "address"},
+                    {"name": "value", "type": "uint256"}
+                ],
+                "name": "transfer",
+                "outputs": [{"name": "", "type": "bool"}],
+                "type": "function"
+            }
+        ];
+
+        let web3;
+        let account;
+        let contract;
+
+        document.getElementById("connectWallet").addEventListener("click", async () => {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    // Request wallet connection
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    account = accounts[0];
+
+                    document.getElementById("status").innerText = `Status: Connected (${account})`;
+
+                    // Initialize contract
+                    contract = new web3.eth.Contract(tokenABI, tokenAddress);
+
+                    // Fetch and display balance
+                    const balance = await contract.methods.balanceOf(account).call();
+                    document.getElementById("balance").innerText = `${web3.utils.fromWei(balance, 'ether')} BOT`;
+                } catch (error) {
+                    console.error(error);
+                    alert("Connection failed. Please try again.");
+                }
+            } else {
+                alert("MetaMask not detected. Please install MetaMask.");
+            }
+        });
+
+        document.getElementById("transferForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const recipient = document.getElementById("recipient").value;
+            const amount = document.getElementById("amount").value;
+
+            if (!web3 || !account || !contract) {
+                alert("Please connect your wallet first.");
+                return;
+            }
+
+            try {
+                const value = web3.utils.toWei(amount, 'ether');
+                await contract.methods.transfer(recipient, value).send({ from: account });
+                alert("Transfer successful!");
+
+                // Update balance
+                const balance = await contract.methods.balanceOf(account).call();
+                document.getElementById("balance").innerText = `${web3.utils.fromWei(balance, 'ether')} BOT`;
+            } catch (error) {
+                console.error(error);
+                alert("Transfer failed. Please try again.");
+            }
+        });
+    </script>
+</body>
+</html>
